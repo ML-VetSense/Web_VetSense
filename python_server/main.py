@@ -16,6 +16,9 @@ import torch.nn.functional as F
 from torchvision import transforms, models
 import joblib
 import base64, io, numpy as np, matplotlib.pyplot as plt, cv2
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 # ----------------------------------------------------------
 # CONFIGURACIÓN BASE
@@ -36,9 +39,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # CARGA DE MODELOS
 # ----------------------------------------------------------
 #MODEL_TABULAR_PATH = "../models/best_model_tabular.pth"
-MODEL_TABULAR_PATH = "../models/xgboost_model.pkl"
-SCALER_PATH = "../models/scaler.pkl"
-ENCODERS_PATH = "../models/label_encoders.pkl"
+#MODEL_TABULAR_PATH = "../models/xgboost_model.pkl"
+MODEL_TABULAR_PATH = "../models/the_xgboost_bundle.pkl"
+SCALER_PATH = "../models/the_scaler.pkl"
+ENCODERS_PATH = "../models/the_label_encoders.pkl"
 MODEL_IMAGE_PATH = "../models/best_efficientnet_model_b.pth"
 
 # === Imagen (EfficientNet-B0 modificado) ===
@@ -58,14 +62,40 @@ image_model.eval()
 print("✅ Modelo de imagen cargado correctamente.")
 
 # === Tabular ===    
+tabular_model = None
+FEATURE_NAMES = None
+numeric_cols = None
+categorical_cols = None
+label_encoder_target = None
+class_names = None
+
 try:
-    tabular_model = joblib.load(MODEL_TABULAR_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    label_encoders = joblib.load(ENCODERS_PATH)
-    print("✅ Modelo tabular y preprocesadores cargados correctamente.")
+    bundle = joblib.load(MODEL_TABULAR_PATH)
+
+    # Si es un diccionario con todos los componentes
+    if isinstance(bundle, dict) and "model" in bundle:
+        tabular_model = bundle["model"]
+        FEATURE_NAMES = bundle.get("feature_names", None)
+        numeric_cols = bundle.get("numeric_cols", None)
+        categorical_cols = bundle.get("categorical_cols", None)
+        label_encoder_target = bundle.get("target_encoder", None) or bundle.get("label_encoder_target", None)
+        class_names = bundle.get("class_names", None) or (label_encoder_target.classes_ if label_encoder_target is not None else None)  
+        
+        print("✅ Modelo tabular y metadatos cargados correctamente (bundle).")
+        if FEATURE_NAMES is not None:
+            print(f"📊 Modelo espera {len(FEATURE_NAMES)} features.")
+
+    else:
+        # Podría ser un modelo suelto (pipeline) salvado sin metadatos
+        if isinstance(bundle, XGBClassifier) or hasattr(bundle, "predict_proba"):
+            tabular_model = bundle
+            print("✅ Modelo tabular cargado (modelo individual).")
+        else:
+            raise ValueError("Formato de bundle no reconocido.")
+
 except Exception as e:
     print(f"⚠️ Error al cargar modelo tabular o preprocesadores: {e}")
-    tabular_model, scaler, label_encoders = None, None, None
+    tabular_model = None
 
 # ----------------------------------------------------------
 # TRANSFORMACIONES Y CLASES
@@ -93,28 +123,45 @@ classes_visible = [
 ]
 visible_indices = [classes_full.index(c) for c in classes_visible]
 
-TABULAR_CLASSES = [
-    "Parvovirus in Dog", "Worm Infection", "Distemper",
-    "Gastroenteritis", "Food Poisoning"
-]
-
 # ----------------------------------------------------------
 # ESTRUCTURAS DE ENTRADA
 # ----------------------------------------------------------
-class AnimalData(BaseModel):
-    species: str
-    age: float
-    weight: float
-
-class Vitals(BaseModel):
-    temperature: Optional[float] = None
-    heart_rate: Optional[float] = None
-    resp_rate: Optional[float] = None
-
 class ClinicalRequest(BaseModel):
-    animal: AnimalData
-    symptoms: List[str]
-    vitals: Vitals
+    Animal_Type: Optional[str] = None
+    Breed: Optional[str] = None
+    Age: Optional[float] = None
+    Gender: Optional[str] = None
+    Weight: Optional[float] = None
+    Duration: Optional[str] = None
+    Appetite_Loss: Optional[int] = 0
+    Vomiting: Optional[int] = 0
+    Diarrhea: Optional[int] = 0
+    Lethargy: Optional[int] = 0
+    Coughing: Optional[int] = 0
+    Sneezing: Optional[int] = 0
+    Skin_Lesion_Present: Optional[int] = 0
+    Skin_Lesion_Type: Optional[str] = "None"
+    Skin_Lesion_Location: Optional[str] = "None"
+    Hair_Loss: Optional[int] = 0
+    Itching_Scratching: Optional[int] = 0
+    Lesion_Color: Optional[str] = "None"
+    Nasal_Discharge: Optional[int] = 0
+    Eye_Discharge: Optional[int] = 0
+    Eye_Redness: Optional[int] = 0
+    Ear_Discharge: Optional[int] = 0
+    Head_Shaking: Optional[int] = 0
+    Bad_Breath: Optional[int] = 0
+    Drooling: Optional[int] = 0
+    Difficulty_Eating: Optional[int] = 0
+    Frequent_Urination: Optional[int] = 0
+    Blood_in_Urine: Optional[int] = 0
+    Straining_to_Urinate: Optional[int] = 0
+    Increased_Thirst: Optional[int] = 0
+    Weakness: Optional[int] = 0
+    Body_Temperature: Optional[float] = None
+    Heart_Rate: Optional[float] = None
+    Respiratory_Rate: Optional[float] = None
+
 
 class ImageRequest(BaseModel):
     image: str  # base64 encoded image
@@ -123,38 +170,45 @@ class ImageRequest(BaseModel):
 # ----------------------------------------------------------
 # FUNCIONES AUXILIARES 🧩
 # ----------------------------------------------------------
+import pandas as pd
 def preprocess_input(data: ClinicalRequest):
     """
     Preprocesa los datos clínicos con los encoders y scaler reales
     """
-    # Ejemplo: según tu dataset real, ajusta el orden de features
-    input_dict = {
-        "Species": data.animal.species,
-        "Age": data.animal.age,
-        "Weight": data.animal.weight,
-        "Temperature": data.vitals.temperature or 38.0,
-        "Heart_Rate": data.vitals.heart_rate or 80,
-        "Resp_Rate": data.vitals.resp_rate or 25,
-        "Num_Symptoms": len(data.symptoms)
-    }
 
-    # Codificar variables categóricas
-    for col, encoder in label_encoders.items():
-        if col in input_dict:
-            try:
-                input_dict[col] = encoder.transform([input_dict[col]])[0]
-            except:
-                input_dict[col] = 0  # valor desconocido → categoría base
+    if FEATURE_NAMES is None:
+        # si no hay feature names, construimos DataFrame directo
+        df = pd.DataFrame([data.dict()])
+        return df
+    
+    # start from request dict
+    req = data.dict()
 
-    # Convertir a array numpy y escalar
-    X = np.array([list(input_dict.values())])
-    X_scaled = scaler.transform(X)
-    return X_scaled
+    
+    # create empty row filled with defaults depending on numeric/categorical
+    row = {}
+    for col in FEATURE_NAMES:
+        if col in req and req[col] is not None:
+            row[col] = req[col]
+        else:
+            # si sabemos que es numérica -> default 0; si categórica -> "None" o 0 según bundle info
+            if numeric_cols and col in numeric_cols:
+                # si Body_Temperature/Heart_Rate/Respiratory_Rate pueden ser None, usa mean-like fallback 0
+                row[col] = 0.0
+            elif categorical_cols and col in categorical_cols:
+                # para categorías usamos "Unknown" o "None" string; OneHotEncoder handle_unknown="ignore" en training
+                row[col] = "Unknown"
+            else:
+                # fallback genérico
+                row[col] = 0
+
+    df = pd.DataFrame([row], columns=FEATURE_NAMES)
+    return df
 
 
 # ----------------------------------------------------------
 # FUNCIÓN GRAD-CAM
-# ----------------------------------------------------------
+# ---------------z-------------------------------------------
 def generate_gradcam(model, input_tensor, target_class):
     """
     Generates Grad-CAM heatmap for the predicted class
@@ -214,27 +268,51 @@ async def predict_clinical(request: ClinicalRequest):
 
     try:
          # 🧩 Preprocesamiento
-        X_scaled = preprocess_input(request)
+        X_df = preprocess_input(request)
         
-        print("Shape de X:", X_scaled.shape)
-        print("Columnas:", X_scaled.columns)
+        # Debug info
+        if FEATURE_NAMES is not None:
+            sent_cols = list(X_df.columns)
+            print(f"🧾 Columnas enviadas: {len(sent_cols)}")
+            print(sent_cols)
+            print(f"📊 Columnas esperadas por el modelo: {len(FEATURE_NAMES)}")
+            # detect extra / missing
+            extra = [c for c in sent_cols if c not in FEATURE_NAMES]
+            missing = [c for c in FEATURE_NAMES if c not in sent_cols]
+            if extra:
+                print(f"⚠️ EXTRA: {extra}")
+            if missing:
+                print(f"⚠️ MISSING: {missing}")
 
         
         # 🔮 Predicción
-        probs = tabular_model.predict_proba(X_scaled)[0]
-
-        predictions = [
-            {"class": TABULAR_CLASSES[i], "prob": float(probs[i])}
-            for i in np.argsort(probs)[::-1]
-        ][:5]
+        probs = tabular_model.predict_proba(X_df)[0]
+        
+        
+        # Get class names from bundle / label encoder
+        if class_names is not None:
+            _class_names = class_names
+        elif label_encoder_target is not None:
+            _class_names = label_encoder_target.classes_
+        else:
+            # fallback - try to infer from model (not always possible)
+            try:
+                _class_names = [str(i) for i in range(len(probs))]
+            except:
+                _class_names = []
+            
+        
+        # order top predictions
+        top_idx = np.argsort(probs)[::-1][:5]
+        predictions = [{"class": _class_names[i] if i < len(_class_names) else str(i), "prob": float(probs[i])} for i in top_idx]
 
         return {
             "predictions": predictions,
             "top_class": predictions[0]["class"],
             "top_prob": predictions[0]["prob"],
             "explanations": {
-                "features": ["Age", "Weight", "Temperature", "Heart Rate", "Resp Rate", "Symptoms"],
-                "method": "feature importance (pending)"
+                "features": FEATURE_NAMES if FEATURE_NAMES else "unknown",
+                "method": "pipeline (preprocessor + xgboost)"
             }
         }
 
