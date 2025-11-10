@@ -1,7 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { Info, HelpCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ResultadoTabularProps {
   resultado: {
@@ -11,10 +17,16 @@ interface ResultadoTabularProps {
     }>;
     top_class: string;
     top_prob: number;
-    explanations: {
-      features: string[];
-      method: string;
+    explanations?: {
+      features?: string[];
+      method?: string;
     };
+    isReclassified?: boolean;
+    originalSum?: number;
+    originalPredictions?: Array<{
+      class: string;
+      prob: number;
+    }>;
   };
 }
 
@@ -27,6 +39,44 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
           Este resultado es orientativo y no sustituye una consulta veterinaria profesional.
         </AlertDescription>
       </Alert>
+
+      {resultado.isReclassified && (
+        <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+          <Info className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertDescription className="text-green-800 dark:text-green-300 flex items-center gap-2">
+            <span>
+              El sistema detecta muy baja probabilidad de enfermedad (suma: {((resultado.originalSum || 0) * 100).toFixed(2)}%). 
+              Clasificado como <strong>Healthy</strong> (estimado {(resultado.top_prob * 100).toFixed(1)}%).
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 cursor-help flex-shrink-0 text-green-600 dark:text-green-400" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs p-4">
+                  <div className="space-y-2">
+                    <p className="font-semibold text-sm mb-2">Desglose de probabilidades detectadas:</p>
+                    {resultado.originalPredictions && resultado.originalPredictions.length > 0 ? (
+                      <div className="space-y-1">
+                        {resultado.originalPredictions
+                          .sort((a, b) => b.prob - a.prob)
+                          .map((pred, idx) => (
+                            <div key={idx} className="flex justify-between text-xs">
+                              <span>{pred.class}</span>
+                              <span className="font-mono">{(pred.prob * 100).toFixed(2)}%</span>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No hay enfermedades detectadas</p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="border-primary/20">
         <CardHeader>
@@ -71,19 +121,28 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground mb-3">
-              Método de explicación: <span className="font-semibold uppercase">{resultado.explanations.method}</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {resultado.explanations.features.map((feature, idx) => (
-                <div
-                  key={idx}
-                  className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium"
-                >
-                  {feature}
+            {resultado.explanations && (
+              <>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Método de explicación: <span className="font-semibold uppercase">{resultado.explanations.method}</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {resultado.explanations.features?.map((feature, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium"
+                    >
+                      {feature}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
+            {!resultado.explanations && (
+              <p className="text-sm text-muted-foreground">
+                No hay explicaciones disponibles para este diagnóstico.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
