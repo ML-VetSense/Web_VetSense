@@ -362,7 +362,6 @@ async def predict_image(request: ImageRequest):
             "top_class": classes_visible[predicted_idx.item()],
             "top_prob": float(confidence.item()),
             "gradcam_url": f"data:image/png;base64,{gradcam_b64}",
-            #"gradcam_url": None,  # Will be generated when model is implemented
             "category": "Desease Detected" if classes_visible[predicted_idx.item()] != "Healthy" else "Healthy"
         }
 
