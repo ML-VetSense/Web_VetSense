@@ -67,7 +67,7 @@ const DiagnosticoImagen = () => {
       reader.onload = async () => {
         const base64 = reader.result as string;
         
-        const response = await fetch('https://api-vetsense.onrender.com', {
+        const response = await fetch('https://api-vetsense.onrender.com/validate_pet', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ const DiagnosticoImagen = () => {
         const base64 = reader.result as string;
         
         // Call local Python server directly for local development
-        const response = await fetch('https://api-vetsense.onrender.com', {
+        const response = await fetch('https://api-vetsense.onrender.com/predict_image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
