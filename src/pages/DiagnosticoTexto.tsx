@@ -18,7 +18,7 @@ interface ClinicalData {
   Age: number;
   Gender: string;
   Weight: number;
-  Duration: string;
+  Duration: number;
   Appetite_Loss: number;
   Vomiting: number;
   Diarrhea: number;
@@ -158,7 +158,7 @@ const DiagnosticoTexto = () => {
         Age: parseFloat(age),
         Gender: gender || "Unknown",
         Weight: parseFloat(weight),
-        Duration: duration || "Unknown",
+        Duration: duration ? parseFloat(duration) : 0,
         Appetite_Loss: appetiteLoss ? 1 : 0,
         Vomiting: vomiting ? 1 : 0,
         Diarrhea: diarrhea ? 1 : 0,
@@ -255,8 +255,8 @@ const DiagnosticoTexto = () => {
           Volver
         </Button>
 
-        <h1 className="text-4xl font-bold mb-2 text-foreground">Diagnóstico por Texto</h1>
-        <p className="text-muted-foreground mb-8">Análisis clínico basado en síntomas y datos del animal</p>
+        <h1 className="text-4xl font-bold mb-2 text-primary">Detección por Datos Clínicos</h1>
+        <p className="text-muted-foreground mb-8">Sistema de análisis basado en parámetros clínicos y síntomas observados</p>
 
         <div className="space-y-6">
           <Card>
@@ -273,8 +273,8 @@ const DiagnosticoTexto = () => {
                       <SelectValue placeholder="Selecciona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Dog">Perro</SelectItem>
-                      <SelectItem value="Cat">Gato</SelectItem>
+                      <SelectItem value="dog">Perro</SelectItem>
+                      <SelectItem value="cat">Gato</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -306,8 +306,8 @@ const DiagnosticoTexto = () => {
                       <SelectValue placeholder="Selecciona" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Male">Macho</SelectItem>
-                      <SelectItem value="Female">Hembra</SelectItem>
+                      <SelectItem value="male">Macho</SelectItem>
+                      <SelectItem value="female">Hembra</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -325,10 +325,11 @@ const DiagnosticoTexto = () => {
               <div className="space-y-2">
                 <Label htmlFor="duration">Duración de síntomas (días)</Label>
                 <Input 
-                  id="duration"  
+                  id="duration" 
+                  type="number" 
                   value={duration} 
                   onChange={(e) => setDuration(e.target.value)}
-                  placeholder="Ej: 3d"
+                  placeholder="Ej: 3"
                 />
               </div>
             </CardContent>

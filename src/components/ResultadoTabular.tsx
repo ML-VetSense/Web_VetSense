@@ -41,9 +41,9 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
       </Alert>
 
       {resultado.isReclassified && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
-          <Info className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertDescription className="text-green-800 dark:text-green-300 flex items-center gap-2">
+        <Alert className="border-success bg-success/10">
+          <Info className="h-4 w-4 text-success" />
+          <AlertDescription className="text-success-foreground flex items-center gap-2">
             <span>
               El sistema detecta muy baja probabilidad de enfermedad (suma: {((resultado.originalSum || 0) * 100).toFixed(2)}%). 
               Clasificado como <strong>Healthy</strong> (estimado {(resultado.top_prob * 100).toFixed(1)}%).
@@ -51,7 +51,7 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <HelpCircle className="h-4 w-4 cursor-help flex-shrink-0 text-green-600 dark:text-green-400" />
+                  <HelpCircle className="h-4 w-4 cursor-help flex-shrink-0 text-success" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs p-4">
                   <div className="space-y-2">
@@ -79,25 +79,25 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
       )}
 
       <Card className="border-primary/20">
-        <CardHeader>
-          <CardTitle className="text-2xl">Diagnóstico Principal</CardTitle>
-          <CardDescription>Predicción más probable según el modelo</CardDescription>
+        <CardHeader className="bg-primary/5">
+          <CardTitle className="text-2xl text-primary">Condición Identificada</CardTitle>
+          <CardDescription>Predicción más probable según los datos clínicos</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold text-primary">{resultado.top_class}</h3>
-              <span className="text-2xl font-bold">{(resultado.top_prob * 100).toFixed(1)}%</span>
+              <span className="text-2xl font-bold text-primary">{(resultado.top_prob * 100).toFixed(1)}%</span>
             </div>
             <Progress value={resultado.top_prob * 100} className="h-3" />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Top 5 Diagnósticos Posibles</CardTitle>
-          <CardDescription>Probabilidades de otras enfermedades consideradas</CardDescription>
+      <Card className="border-primary/20">
+        <CardHeader className="bg-primary/5">
+          <CardTitle className="text-primary">Top 5 Condiciones Posibles</CardTitle>
+          <CardDescription>Probabilidades de otras condiciones consideradas</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -114,10 +114,10 @@ const ResultadoTabular = ({ resultado }: ResultadoTabularProps) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Explicación del Análisis</CardTitle>
-          <CardDescription>Variables más relevantes en el diagnóstico</CardDescription>
+      <Card className="border-primary/20">
+        <CardHeader className="bg-primary/5">
+          <CardTitle className="text-primary">Explicación del Análisis</CardTitle>
+          <CardDescription>Variables clínicas más relevantes en la detección</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
