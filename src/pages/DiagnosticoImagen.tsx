@@ -89,7 +89,7 @@ const DiagnosticoImagen = () => {
           setPaso('diagnostico');
           toast({
             title: "¡Mascota detectada!",
-            description: `Se ha detectado un ${data.animal_type === 'dog' ? 'perro' : 'gato'}. Ahora puedes proceder con el diagnóstico.`
+            description: `Se ha detectado un ${data.animal_type === 'dog' ? 'perro' : 'gato'}. Ahora puedes proceder con la detección.`
           });
         } else {
           toast({
@@ -216,7 +216,7 @@ const DiagnosticoImagen = () => {
                   Sube una Foto de tu Mascota
                 </CardTitle>
                 <CardDescription>
-                  Necesitamos verificar que sea un perro o gato antes de continuar con el diagnóstico
+                  Necesitamos verificar que sea un perro o gato antes de continuar con la detección
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -270,7 +270,7 @@ const DiagnosticoImagen = () => {
             <Alert className="mt-6">
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Este paso asegura que la foto sea de un perro o gato para poder realizar un diagnóstico preciso.
+                Este paso asegura que la foto sea de un perro o gato para poder realizar una detección precisa.
               </AlertDescription>
             </Alert>
           </>
