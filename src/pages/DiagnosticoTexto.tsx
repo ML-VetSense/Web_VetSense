@@ -189,7 +189,7 @@ const DiagnosticoTexto = () => {
         Respiratory_Rate: respiratoryRate ? parseFloat(respiratoryRate) : null
       };
 
-      const response = await fetch('http://localhost:8000/predict_clinical', {
+      const response = await fetch('https://api-vetsense.onrender.com/predict_clinical', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
