@@ -18,7 +18,7 @@ interface ClinicalData {
   Age: number;
   Gender: string;
   Weight: number;
-  Duration: number;
+  Duration: string;
   Appetite_Loss: number;
   Vomiting: number;
   Diarrhea: number;
@@ -158,7 +158,7 @@ const DiagnosticoTexto = () => {
         Age: parseFloat(age),
         Gender: gender || "Unknown",
         Weight: parseFloat(weight),
-        Duration: duration ? parseFloat(duration) : 0,
+        Duration: duration || "Unknown",
         Appetite_Loss: appetiteLoss ? 1 : 0,
         Vomiting: vomiting ? 1 : 0,
         Diarrhea: diarrhea ? 1 : 0,
@@ -326,7 +326,6 @@ const DiagnosticoTexto = () => {
                 <Label htmlFor="duration">Duración de síntomas (días)</Label>
                 <Input 
                   id="duration" 
-                  type="number" 
                   value={duration} 
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="Ej: 3"
